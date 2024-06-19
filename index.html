@@ -1,0 +1,223 @@
+<!-- Embeddable Widget Start -->
+<div id="custom-widget">
+    <button id="open-form">Open Form</button>
+    <div id="form-container" style="display:none;">
+      <form id="submission-form" action="https://formspree.io/f/xnqeekok" method="POST">
+        <div class="form-group">
+          <label for="name">Name:</label>
+          <input type="text" id="name" name="name" placeholder="Enter your name" required>
+        </div>
+        <div class="form-group">
+          <label for="email">Email:</label>
+          <input type="email" id="email" name="email" placeholder="Enter your email" required>
+        </div>
+        <div class="form-group">
+          <label for="audio">Record Audio:</label><br>
+          <div id="record-buttons">
+            <button id="start-record" type="button">Start</button>
+            <button id="stop-record" type="button" disabled>Stop</button>
+          </div>
+          <audio id="audio-playback" controls style="display: none;"></audio>
+          <input type="hidden" id="audio-blob" name="audio-blob">
+        </div>
+        <div class="form-group">
+          <button type="submit">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <style>
+    /* Custom Widget Container */
+    #custom-widget {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #f8f9fa; /* Light gray background */
+      border: 1px solid #ced4da; /* Border color */
+      padding: 15px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      font-family: Arial, sans-serif;
+      border-radius: 8px; /* Rounded corners */
+    }
+  
+    /* Form Container */
+    #form-container {
+      display: none;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+  
+    /* Form Group */
+    .form-group {
+      margin-bottom: 15px;
+    }
+  
+    /* Labels */
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #495057; /* Label text color */
+    }
+  
+    /* Inputs */
+    input[type="text"],
+    input[type="email"],
+    button {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+      outline: none; /* Remove outline on focus */
+    }
+  
+    /* Placeholder text */
+    input[type="text"]::placeholder,
+    input[type="email"]::placeholder {
+      color: #999;
+    }
+  
+    /* Submit button */
+    button[type="submit"] {
+      background-color: #007bff; /* Blue submit button */
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      border: none;
+      border-radius: 4px;
+      padding: 12px 0;
+      font-size: 16px;
+    }
+  
+    button[type="submit"]:hover {
+      background-color: #0056b3; /* Darker blue on hover */
+    }
+  
+    /* Recording buttons */
+    #record-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+  
+    #start-record,
+    #stop-record {
+      flex: 1; /* Equal width */
+      padding: 8px 12px; /* Adjust padding */
+      border-radius: 10px; /* Rounded corners */
+      background-color: #28a745; /* Green button */
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      border: none;
+      outline: none; /* Remove outline on focus */
+    }
+  
+    #start-record:hover,
+    #stop-record:hover {
+      background-color: #218838; /* Darker green on hover */
+    }
+  
+    #stop-record {
+      margin-left: 10px; /* Add space between buttons */
+    }
+  
+    /* Audio playback */
+    #audio-playback {
+      margin-top: 10px;
+    }
+  
+    /* Open form button */
+    #open-form {
+      background-color: #007bff; /* Blue open form button */
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      outline: none; /* Remove outline on focus */
+    }
+  
+    #open-form:hover {
+      background-color: #0056b3; /* Darker blue on hover */
+    }
+  
+  </style>
+  
+  <script>
+    // Toggle form visibility on click
+    document.getElementById('open-form').addEventListener('click', function() {
+      var formContainer = document.getElementById('form-container');
+      var openFormButton = document.getElementById('open-form');
+      if (formContainer.style.display === 'none') {
+        formContainer.style.display = 'block';
+        openFormButton.style.display = 'none'; // Hide the open form button
+      } else {
+        formContainer.style.display = 'none';
+        openFormButton.style.display = 'block'; // Show the open form button
+      }
+    });
+  
+    let mediaRecorder;
+    let audioChunks = [];
+  
+    // Start recording audio
+    document.getElementById('start-record').addEventListener('click', function() {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          mediaRecorder = new MediaRecorder(stream);
+          mediaRecorder.start();
+          audioChunks = [];
+  
+          mediaRecorder.addEventListener('dataavailable', event => {
+            audioChunks.push(event.data);
+          });
+  
+          mediaRecorder.addEventListener('stop', () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = document.getElementById('audio-playback');
+            audio.src = audioUrl;
+            audio.style.display = 'block';
+  
+            // Convert the Blob to base64 to store in the hidden input
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = function() {
+              document.getElementById('audio-blob').value = reader.result;
+            };
+  
+            // Clean up
+            stream.getTracks().forEach(track => track.stop());
+          });
+  
+          document.getElementById('start-record').disabled = true;
+          document.getElementById('stop-record').disabled = false;
+        });
+    });
+  
+    // Stop recording audio
+    document.getElementById('stop-record').addEventListener('click', function() {
+      mediaRecorder.stop();
+      document.getElementById('start-record').disabled = false;
+      document.getElementById('stop-record').disabled = true;
+    });
+  
+    // Close the form if clicking outside of it
+    document.addEventListener('click', function(event) {
+      var formContainer = document.getElementById('form-container');
+      var openFormButton = document.getElementById('open-form');
+      if (!formContainer.contains(event.target) && event.target !== openFormButton) {
+        formContainer.style.display = 'none';
+        openFormButton.style.display = 'block';
+      }
+    });
+  </script>
+  <!-- Embeddable Widget End -->
+  
